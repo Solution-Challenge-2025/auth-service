@@ -1,0 +1,52 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Binary files
+bin/
+dist/
+
+# Log files
+*.log
+
+# Local development
+tmp/
+temp/
+
+# Coverage reports
+coverage.txt
+
+# Air live reload
+tmp/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# System Files
+.DS_Store
+Thumbs.db 
