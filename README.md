@@ -365,3 +365,144 @@ auth-service/
 ## License
 
 [Your License Here]
+
+## Deployment to Google Cloud Run
+
+### Prerequisites
+
+1. Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
+2. Create a [Google Cloud Project](https://console.cloud.google.com/)
+3. Enable required APIs:
+   - Cloud Run API
+   - Cloud Build API
+   - Container Registry API
+   - Cloud SQL Admin API (if using Cloud SQL)
+
+### Local Development with Docker
+
+1. Build the Docker image:
+
+   ```bash
+   docker build -t auth-service .
+   ```
+
+2. Run the container:
+   ```bash
+   docker run -p 8080:8080 \
+     -e URI=postgresql://postgres:postgres@host.docker.internal:5432/auth_db?sslmode=disable \
+     -e JWT_SECRET_KEY=your-super-secret-key-change-this-in-production \
+     auth-service
+   ```
+
+### Deploying to Google Cloud Run
+
+1. Initialize Google Cloud SDK and set your project:
+
+   ```bash
+   gcloud init
+   gcloud config set project YOUR_PROJECT_ID
+   ```
+
+2. Set up Cloud SQL (if using PostgreSQL):
+
+   ```bash
+   # Create Cloud SQL instance
+   gcloud sql instances create auth-db \
+     --database-version=POSTGRES_12 \
+     --tier=db-f1-micro \
+     --region=us-central1 \
+     --root-password=YOUR_DB_PASSWORD
+
+   # Create database
+   gcloud sql databases create auth_db --instance=auth-db
+   ```
+
+3. Set up environment variables in Google Cloud Secrets:
+
+   ```bash
+   # Create secrets for sensitive data
+   gcloud secrets create db-uri --data-file=<(echo -n "postgresql://postgres:YOUR_DB_PASSWORD@/auth_db?host=/cloudsql/YOUR_PROJECT_ID:us-central1:auth-db")
+   gcloud secrets create jwt-secret --data-file=<(echo -n "your-super-secret-key-change-this-in-production")
+
+   # Grant Cloud Run access to secrets
+   gcloud secrets add-iam-policy-binding db-uri \
+     --member="serviceAccount:YOUR_PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+     --role="roles/secretmanager.secretAccessor"
+
+   gcloud secrets add-iam-policy-binding jwt-secret \
+     --member="serviceAccount:YOUR_PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+     --role="roles/secretmanager.secretAccessor"
+   ```
+
+4. Set up Cloud Build triggers:
+
+   ```bash
+   # Create Cloud Build trigger
+   gcloud builds triggers create github \
+     --repo-name=YOUR_REPO_NAME \
+     --repo-owner=YOUR_GITHUB_USERNAME \
+     --branch-pattern="^main$" \
+     --build-config=cloudbuild.yaml
+   ```
+
+5. Deploy manually (optional):
+   ```bash
+   gcloud builds submit --config=cloudbuild.yaml \
+     --substitutions=_DB_URI="postgresql://postgres:12345678@/auth_db?host=/cloudsql/elemental-icon-454618-m0:us-central1:auth-db",_JWT_SECRET_KEY="12345678"
+   ```
+
+### Environment Variables
+
+The service requires the following environment variables:
+
+1. Local Development:
+   Create a `.env` file in the root directory:
+
+   ```env
+   # Database Configuration
+   URI=postgresql://postgres:postgres@localhost:5432/auth_db?sslmode=disable
+
+   # JWT Configuration
+   JWT_SECRET_KEY=your-super-secret-key-change-this-in-production
+
+   # Server Configuration
+   PORT=8080
+   ```
+
+2. Production (Cloud Run):
+   Environment variables are managed through Google Cloud Secrets:
+   - `URI`: Database connection string
+   - `JWT_SECRET_KEY`: Secret key for JWT token generation
+   - `PORT`: Port number (defaults to 8080 in Cloud Run)
+
+### Free Tier Limits
+
+Google Cloud Run's free tier includes:
+
+- 2 million requests per month
+- 360,000 GB-seconds of compute time
+- 180,000 vCPU-seconds of compute time
+
+Cloud SQL free tier includes:
+
+- 1 instance of db-f1-micro
+- 10GB storage
+- 1GB RAM
+
+### Monitoring and Logging
+
+1. View logs:
+
+   ```bash
+   gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=auth-service" --limit 50
+   ```
+
+2. Monitor metrics in Google Cloud Console:
+   - Go to Cloud Run > auth-service > Metrics
+   - View request counts, latency, and error rates
+
+### Cost Optimization
+
+1. Use Cloud SQL's db-f1-micro instance type
+2. Set minimum instances to 0 to scale to zero when not in use
+3. Use Cloud Run's concurrency settings to optimize resource usage
