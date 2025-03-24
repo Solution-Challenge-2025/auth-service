@@ -1,0 +1,20 @@
+runtime: go123
+
+env_variables:
+  URI: "postgresql://postgres:12345678@/auth_db?host=/cloudsql/elemental-icon-454618-m0:us-central1:auth-db&sslmode=disable"
+  JWT_SECRET_KEY: "12345678"
+
+instance_class: F1
+
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 1
+  max_instances: 10
+
+beta_settings:
+  cloud_sql_instances: "elemental-icon-454618-m0:us-central1:auth-db"
+
+handlers:
+- url: /.*
+  script: auto
+  secure: always

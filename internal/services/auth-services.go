@@ -76,7 +76,7 @@ func (s *AuthService) Login(input LoginInput) (string, error) {
 	}
 
 	// Generate token with user ID and role
-	token, err := jwt.GenerateToken(user.ID.String(), user.Role)
+	token, err := jwt.GenerateToken(fmt.Sprintf("%d", user.ID), user.Role)
 	if err != nil {
 		return "", err
 	}
