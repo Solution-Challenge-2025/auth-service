@@ -5,17 +5,32 @@ import (
 	"auth-service/internal/handlers"
 	"auth-service/internal/repositories"
 	"auth-service/internal/services"
+	"auth-service/migrations"
 	"auth-service/routes"
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load environment variables
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: .env file not found: %v", err)
+	}
+
 	// Initialize database
 	db, err := config.InitDB()
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+
+	// Run migrations
+	log.Println("Running database migrations...")
+	if err := migrations.Migrate(db); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+	log.Println("Migrations completed successfully")
 
 	// Initialize repositories
 	authRepo := repositories.NewAuthRepository(db)
